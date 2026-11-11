@@ -1,16 +1,45 @@
 #version 460 core
-out vec4 FragColor;
-in vec3 Normal;
-in vec3 FragPos;
 
-uniform vec3 lightColor;
+struct Material {
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float shininess;
+};
+
+struct Light {
+    vec3 position;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+};
+
+in vec3 FragPos;
+in vec3 Normal;
+
+uniform vec3 viewPos;
+uniform Material material;
+uniform Light light;
+
+out vec4 FragColor;
 
 void main() {
+    // 1. Ambient (окружающее освещение)
+    vec3 ambient = light.ambient * material.ambient;
+
+    // 2. Diffuse (диффузное освещение)
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(vec3(0.5f, 1.0f, 0.3f));
-    
+    vec3 lightDir = normalize(light.position - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;
-    
-    FragColor = vec4(diffuse, 1.0);
+    vec3 diffuse = light.diffuse * diff * material.diffuse;
+
+    // 3. Specular (зеркальное освещение / блики)
+    vec3 viewDir = normalize(viewPos - FragPos);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    vec3 specular = light.specular * spec * material.specular;
+
+    // Итоговый цвет
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(result, 1.0);
 }
